@@ -14,6 +14,7 @@ if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
 else:
     import xml.etree.ElementTree as ET
+import csv
 
 fs = open('data/logo_name.txt','r') 
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
@@ -269,20 +270,24 @@ class LogoDetection(data.Dataset):
         use_07_metric = True 
         if output_dir is not None and not os.path.isdir(output_dir):
             os.mkdir(output_dir)
+        csvfile = open('result.csv','w')
+        writer = csv.writer(csvfile)
         for i, cls in enumerate(LOGO_CLASSES):
 
             if cls == '__background__':
                 continue
-
+            
             filename = self._get_voc_results_file_template().format(cls)
             rec, prec, ap = voc_eval(
                                     filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
                                     use_07_metric=use_07_metric)
             aps += [ap]
             print('AP for {} = {:.4f}'.format(cls, ap))
+            writer.writerow([cls,ap])
             if output_dir is not None:
                 with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
                     pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+        csvfile.close()
         print('Mean AP = {:.4f}'.format(np.mean(aps)))
         print('~~~~~~~~')
         print('Results:')
