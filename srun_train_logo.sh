@@ -1,1 +1,1 @@
-srun --partition=SenseMediaF --mpi=pmi2 --gres=gpu:2 --job-name=ssd --kill-on-bad-exit=1 python train_logo_cosine.py -d Logo -v RFB_E_vgg -s 512 -b 16 --ngpu 2 --save_folder logo149cosine --resume_net RFB512_E_34_4.pth --resume_epoch 10 
+srun --partition=SenseMediaF --mpi=pmi2 --gres=gpu:2 --job-name=ssd --kill-on-bad-exit=1 python train_logo_cosine.py -d Logo -v RFB_E_vgg -s 512 -b 16 --ngpu 2 --save_folder logo149cosine --resume_net RFB512_E_34_4.pth --resume_epoch 70 
