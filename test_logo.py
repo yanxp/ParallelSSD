@@ -172,7 +172,7 @@ if __name__ == '__main__':
     # load data
     if args.dataset == 'Logo':
         testset = LogoDetection(
-            Logoroot, ['test'], None, AnnotationTransform())
+            Logoroot, ['test_bak'], None, AnnotationTransform())
     elif args.dataset == 'COCO':
         testset = COCODetection(
             COCOroot, [('2014', 'minival')], None)
