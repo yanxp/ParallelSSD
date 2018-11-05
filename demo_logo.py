@@ -70,22 +70,22 @@ with torch.no_grad():
 COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
-fs = open('data/logo_name.txt','r') 
+fs = open('data/19logo_name.txt','r') 
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
 fs.close()
 
-def test_net(save_folder, net, detector, cuda,transform, max_per_image=300, thresh=0.005):
+def test_net(num_classes, save_folder, net, detector, cuda,transform, max_per_image=300, thresh=0.005):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
     # dump predictions and assoc. ground truth to text file for now
-    #num_images = len(testset)
-    num_classes = (150, 81)[args.dataset == 'COCO']
+    # num_images = len(testset)
+    # num_classes = (150, 81)[args.dataset == 'COCO']
 
-    jpeg = 'data/ailogo/JPEGImages'
-    anno = 'data/ailogo/Annotations'
-    path = 'data/ailogo/ImageSets/Main/test_bak.txt'
-    res = 'results'
+    jpeg = 'data/19/JPEGImages'
+    anno = 'data/19/Annotations'
+    path = 'data/19/ImageSets/Main/test.txt'
+    res = 'result'
     for prefix_name in tqdm(open(path,'r').readlines()):
         
         img_name = prefix_name.strip() + '.jpg'
@@ -134,6 +134,7 @@ def test_net(save_folder, net, detector, cuda,transform, max_per_image=300, thre
             if not os.path.exists(os.path.join(res,label)):
                 os.mkdir(os.path.join(res,label))
             for i in inds:
+                print(label)
                 coords = c_dets[i, :4]
                 score = c_dets[i, -1]
                 cv2.rectangle(image, (int(coords[0]), int(coords[1])), (int(coords[2]), int(coords[3])), COLORS[0], 2)
@@ -162,7 +163,7 @@ def test_net(save_folder, net, detector, cuda,transform, max_per_image=300, thre
 if __name__ == '__main__':
     # load net
     img_dim = (300,512)[args.size=='512']
-    num_classes = (150, 81)[args.dataset == 'COCO']
+    num_classes = 150
     net = build_net('test', img_dim, num_classes)    # initialize detector
     state_dict = torch.load(args.trained_model)
     # create new OrderedDict that does not contain `module.`
@@ -192,6 +193,6 @@ if __name__ == '__main__':
     save_folder = os.path.join(args.save_folder,args.dataset)
     rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile']
     basetransform = preproc(512,rgb_means,-2)
-    test_net(save_folder, net, detector, args.cuda,
+    test_net(num_classes, save_folder, net, detector, args.cuda,
              basetransform,
              top_k, thresh=0.01)

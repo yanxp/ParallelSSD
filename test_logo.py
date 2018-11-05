@@ -146,7 +146,7 @@ def test_net(num_classes,save_folder, net, detector, cuda, testset, transform, m
 if __name__ == '__main__':
     # load net
     
-    fs = open('data/logo_name.txt','r') 
+    fs = open('data/19logo_name.txt','r') 
     LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
     fs.close()
     

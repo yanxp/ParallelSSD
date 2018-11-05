@@ -16,7 +16,7 @@ else:
     import xml.etree.ElementTree as ET
 import csv
 
-fs = open('data/logo_name.txt','r') 
+fs = open('data/19logo_name.txt','r') 
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
 fs.close()
 # for making bounding boxes pretty
@@ -115,10 +115,13 @@ class LogoDetection(data.Dataset):
     def __getitem__(self, index):
         img_id = self.ids[index]
         #print(self._annopath % img_id) 
+        imgname = self._imgpath % img_id
         target = ET.parse(self._annopath % img_id).getroot()
-        img = cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
-        height, width, _ = img.shape
-
+        try:
+            img = Image.open(imgname)
+            img = cv2.cvtColor(np.asarray(img),cv2.COLOR_RGB2BGR)
+        except:
+            print('imgname:{}'.format(imgname))
         if self.target_transform is not None:
             target = self.target_transform(target)
 
@@ -316,8 +319,8 @@ class LogoDetection(data.Dataset):
 
 ## test
 if __name__ == '__main__':
-    ds = LogoDetection('data/Logo', ['train'],None, AnnotationTransform())
-    print(len(ds))
-    image, target = ds[20]
-    print(image,target)
-    ds.show(100)
+    ds = LogoDetection('data/19', ['train'],None, AnnotationTransform())
+    for i in range(len(ds)):
+        image, target = ds[i]
+
+    #ds.show(100)

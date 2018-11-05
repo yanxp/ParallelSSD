@@ -79,7 +79,12 @@ else:
 img_dim = (300,512)[args.size=='512']
 rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile']
 p = (0.6,0.2)[args.version == 'RFB_mobile']
-num_classes = (150, 81)[args.dataset == 'COCO']
+#num_classes = (150, 81)[args.dataset == 'COCO']
+fs = open('data/19logo_name.txt','r') 
+LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
+fs.close()
+num_classes = len(LOGO_CLASSES)
+
 batch_size = args.batch_size
 weight_decay = 0.0005
 gamma = 0.1
