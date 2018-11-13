@@ -8,13 +8,16 @@ import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torch.nn.init as init
 import argparse
+import _init_paths
 import numpy as np
 from torch.autograd import Variable
 import torch.utils.data as data
-from data import Logoroot, Logo_512,Logo_300, VOCroot, COCOroot, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300, AnnotationTransform, COCODetection, VOCDetection, LogoDetection, detection_collate, BaseTransform, preproc
+from data import Logoroot, Logo_512,Logo_300, VOCroot, COCOroot, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300, AnnotationTransform, COCODetection, VOCDetection, LogoDetection, detection_collate, BaseTransform, preproc,collate_minibatch
 from layers.modules import MultiBoxLoss
 from layers.functions import PriorBox
 import time
+
+import nn as mynn
 
 
 parser = argparse.ArgumentParser(
@@ -80,7 +83,7 @@ img_dim = (300,512)[args.size=='512']
 rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile']
 p = (0.6,0.2)[args.version == 'RFB_mobile']
 #num_classes = (150, 81)[args.dataset == 'COCO']
-fs = open('data/19logo_name.txt','r') 
+fs = open('data/logo_name.txt','r') 
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
 fs.close()
 num_classes = len(LOGO_CLASSES)
@@ -122,62 +125,75 @@ if args.resume_net == None:
 
 else:
 # load resume network
-    print('Loading resume network...')
-    state_dict = torch.load(args.resume_net)
-    # create new OrderedDict that does not contain `module.`
-    from collections import OrderedDict
-    conv0 = nn.Conv2d(512, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-    conv1 = nn.Conv2d(1024,num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-    conv2 = nn.Conv2d(512, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-    conv3 = nn.Conv2d(256, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-    conv4 = nn.Conv2d(256, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-    conv5 = nn.Conv2d(256, num_classes*4, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-    conv6 = nn.Conv2d(256, num_classes*4, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        head = k[:7]
-        if head == 'module.':
-            name = k[7:] # remove `module.`
-        else:
-            name = k
-        new_state_dict[name] = v
-        if 'conf.0.weight' in k:
-            new_state_dict[name] = conv0.weight
-        if 'conf.0.bias' in k:
-            new_state_dict[name] = conv0.bias
-        if 'conf.1.weight' in k:
-            new_state_dict[name] = conv1.weight
-        if 'conf.1.bias' in k:
-            new_state_dict[name] = conv1.bias
-        if 'conf.2.weight' in k:
-            new_state_dict[name] = conv2.weight
-        if 'conf.2.bias' in k:
-            new_state_dict[name] = conv2.bias
-        if 'conf.3.weight' in k:
-            new_state_dict[name] = conv3.weight
-        if 'conf.3.bias' in k:
-            new_state_dict[name] = conv3.bias
-        if 'conf.4.weight' in k:
-            new_state_dict[name] = conv4.weight
-        if 'conf.4.bias' in k:
-            new_state_dict[name] = conv4.bias
-        if 'conf.5.weight' in k:
-            new_state_dict[name] = conv5.weight
-        if 'conf.5.bias' in k:
-            new_state_dict[name] = conv5.bias
-        if 'conf.6.weight' in k:
-            new_state_dict[name] = conv6.weight
-        if 'conf.6.bias' in k:
-            new_state_dict[name] = conv6.bias
-    net.load_state_dict(new_state_dict)
+    if 'RFB512_E_34_4' in args.resume_net:
+        print('loading coco pretrain...')
+        state_dict = torch.load(args.resume_net)
+        from collections import OrderedDict
+        conv0 = nn.Conv2d(512, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        conv1 = nn.Conv2d(1024,num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        conv2 = nn.Conv2d(512, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        conv3 = nn.Conv2d(256, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        conv4 = nn.Conv2d(256, num_classes*6, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        conv5 = nn.Conv2d(256, num_classes*4, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        conv6 = nn.Conv2d(256, num_classes*4, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            head = k[:7]
+            if head == 'module.':
+                name = k[7:] # remove `module.`
+            else:
+                name = k
+            new_state_dict[name] = v
+            if 'conf.0.weight' in k:
+                new_state_dict[name] = conv0.weight
+            if 'conf.0.bias' in k:
+                new_state_dict[name] = conv0.bias
+            if 'conf.1.weight' in k:
+                new_state_dict[name] = conv1.weight
+            if 'conf.1.bias' in k:
+                new_state_dict[name] = conv1.bias
+            if 'conf.2.weight' in k:
+                new_state_dict[name] = conv2.weight
+            if 'conf.2.bias' in k:
+                new_state_dict[name] = conv2.bias
+            if 'conf.3.weight' in k:
+                new_state_dict[name] = conv3.weight
+            if 'conf.3.bias' in k:
+                new_state_dict[name] = conv3.bias
+            if 'conf.4.weight' in k:
+                new_state_dict[name] = conv4.weight
+            if 'conf.4.bias' in k:
+                new_state_dict[name] = conv4.bias
+            if 'conf.5.weight' in k:
+                new_state_dict[name] = conv5.weight
+            if 'conf.5.bias' in k:
+                new_state_dict[name] = conv5.bias
+            if 'conf.6.weight' in k:
+                new_state_dict[name] = conv6.weight
+            if 'conf.6.bias' in k:
+                new_state_dict[name] = conv6.bias
+        net.load_state_dict(new_state_dict)
+    else:
+        # load resume network
+        print('Loading trained logo network...')
+        state_dict = torch.load(args.resume_net)
+        # create new OrderedDict that does not contain `module.`
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            head = k[:7]
+            if head == 'module.':
+                name = k[7:] # remove `module.`
+            else:
+                name = k
+            new_state_dict[name] = v
+        net.load_state_dict(new_state_dict)
 
-if args.ngpu > 1:
-    net = torch.nn.DataParallel(net, device_ids=list(range(args.ngpu)))
+net = mynn.DataParallel(net, cpu_keywords=['target'], minibatch=True)
 
 if args.cuda:
     net.cuda()
     cudnn.benchmark = True
-
 
 optimizer = optim.SGD(net.parameters(), lr=args.lr,
                       momentum=args.momentum, weight_decay=args.weight_decay)
@@ -231,7 +247,9 @@ def train():
         if iteration % epoch_size == 0:
             # create batch iterator
             batch_iterator = iter(data.DataLoader(dataset, batch_size,
-                                                  shuffle=True, num_workers=args.num_workers, collate_fn=detection_collate))
+                                                  shuffle=True, num_workers=args.num_workers, collate_fn=collate_minibatch))
+            #batch_iterator = iter(data.DataLoader(dataset, batch_size,
+            #                                      shuffle=True, num_workers=args.num_workers,collate_fn=collate_minibatch))
             loc_loss = 0
             conf_loss = 0
             if (epoch % 5 == 0 and epoch > 0) or (epoch % 5 ==0 and epoch > 200):
@@ -246,27 +264,40 @@ def train():
 
         
         # load train data
-        images, targets = next(batch_iterator)
-        
+        samples = next(batch_iterator)
+        # import pdb;pdb.set_trace()
+        """
         s = 0
         for anno in targets:
             s += sum(anno)
         if abs(sum(s)-0)<1e-6:
             continue
+        """
         #print(np.sum([torch.sum(anno[:,-1] == 2) for anno in targets]))
-
+        #from IPython import embed; embed()
         if args.cuda:
-            images = Variable(images.cuda())
-            targets = [Variable(anno.cuda()) for anno in targets]
+            # samples['image'] = Variable(samples['image'])
+
+            for key in samples:
+                if key != 'target':  # roidb is a list of ndarrays with inconsistent length
+                    samples[key] = list(map(Variable, samples[key]))
+
+            #targets = [Variable(anno.cuda()) for anno in targets]
         else:
             images = Variable(images)
             targets = [Variable(anno) for anno in targets]
         # forward
         t0 = time.time()
-        out = net(images)
+        #out = net(images,targets)
+        #samples = {'images':images,'targets':targets}
         # backprop
         optimizer.zero_grad()
-        loss_l, loss_c = criterion(out, priors, targets)
+        
+        return_dict = net(**samples)
+        
+        loss_l = return_dict['loss_l'].mean()
+        loss_c = return_dict['loss_c'].mean()
+        #loss_l, loss_c = criterion(out, priors, targets)
         loss = loss_l + loss_c
         loss.backward()
         optimizer.step()

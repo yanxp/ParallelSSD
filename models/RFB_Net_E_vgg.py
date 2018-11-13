@@ -7,6 +7,10 @@ import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.backends.cudnn as cudnn
 import os
+from layers.modules import MultiBoxLoss
+from data import Logoroot, Logo_512
+import pickle
+import numpy as np
 
 class BasicConv(nn.Module):
 
@@ -205,12 +209,18 @@ class RFBNet(nn.Module):
         self.Norm = BasicRFB_a(512,512,stride = 1,scale=1.0)
         self.extras = nn.ModuleList(extras)
 
+        cfg = Logo_512
+        priorbox = PriorBox(cfg)
+        with torch.no_grad():
+            self.priors = priorbox.forward()
+
+        self.criterion = MultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5,False)
         self.loc = nn.ModuleList(head[0])
         self.conf = nn.ModuleList(head[1])
         if self.phase == 'test':
             self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, x):
+    def forward(self, image,target):
         """Applies network layers and ops on input image(s) x.
 
         Args:
@@ -229,16 +239,23 @@ class RFBNet(nn.Module):
                     2: localization layers, Shape: [batch,num_priors*4]
                     3: priorbox layers, Shape: [2,num_priors*4]
         """
+        x = image
+        device_id = x.get_device()
+        target = [pickle.loads(t.astype(np.uint8).tobytes()) for t in target]
+        target = [Variable(torch.from_numpy(ann.astype(np.float32))).cuda(device_id) for ann in target]
+        priors = self.priors.cuda(device_id)
+        #import pdb;pdb.set_trace()
         sources = list()
         loc = list()
         conf = list()
 
+        return_dict = {}
+
+        # print('device_id:',device_id)
         # apply vgg up to conv4_3 relu
         for k in range(23):
             x = self.base[k](x)
-
         s1 = self.reduce(x)
-
         # apply vgg up to fc7
         for k in range(23, len(self.base)):
             x = self.base[k](x)
@@ -259,7 +276,6 @@ class RFBNet(nn.Module):
         for (x, l, c) in zip(sources, self.loc, self.conf):
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
-
         #print([o.size() for o in loc])
 
 
@@ -276,7 +292,11 @@ class RFBNet(nn.Module):
                 loc.view(loc.size(0), -1, 4),
                 conf.view(conf.size(0), -1, self.num_classes),
             )
-        return output
+            loss_l,loss_c  = self.criterion(output, priors, target)
+            return_dict['loss_l'] = loss_l.unsqueeze(0)
+            return_dict['loss_c'] = loss_c.unsqueeze(0)
+        
+        return return_dict
 
     def load_weights(self, base_file):
         other, ext = os.path.splitext(base_file)

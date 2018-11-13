@@ -70,7 +70,7 @@ with torch.no_grad():
 COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
-fs = open('data/19logo_name.txt','r') 
+fs = open('data/logo_name.txt','r') 
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
 fs.close()
 
@@ -82,9 +82,9 @@ def test_net(num_classes, save_folder, net, detector, cuda,transform, max_per_im
     # num_images = len(testset)
     # num_classes = (150, 81)[args.dataset == 'COCO']
 
-    jpeg = 'data/19/JPEGImages'
-    anno = 'data/19/Annotations'
-    path = 'data/19/ImageSets/Main/test.txt'
+    jpeg = 'data/logo/JPEGImages'
+    anno = 'data/logo/Annotations'
+    path = 'data/logo/ImageSets/Main/test.txt'
     res = 'result'
     for prefix_name in tqdm(open(path,'r').readlines()):
         
@@ -163,7 +163,7 @@ def test_net(num_classes, save_folder, net, detector, cuda,transform, max_per_im
 if __name__ == '__main__':
     # load net
     img_dim = (300,512)[args.size=='512']
-    num_classes = 150
+    num_classes = len(LOGO_CLASSES)
     net = build_net('test', img_dim, num_classes)    # initialize detector
     state_dict = torch.load(args.trained_model)
     # create new OrderedDict that does not contain `module.`

@@ -15,13 +15,14 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image, ImageDraw, ImageFont
 import cv2
+from torch.utils.data.dataloader import default_collate
 import numpy as np
 from .voc_eval import voc_eval
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
 else:
     import xml.etree.ElementTree as ET
-
+import pickle
 
 VOC_CLASSES = ( '__background__', # always index 0
     'aeroplane', 'bicycle', 'bird', 'boat',
@@ -339,6 +340,7 @@ def detection_collate(batch):
         A tuple containing:
             1) (tensor) batch of images stacked on their 0 dim
             2) (list of tensors) annotations for a given image are stacked on 0 dim
+
     """
     targets = []
     imgs = []
@@ -349,5 +351,39 @@ def detection_collate(batch):
             elif isinstance(tup, type(np.empty(0))):
                 annos = torch.from_numpy(tup).float()
                 targets.append(annos)
+    
+    targets = np.fromstring(pickle.dumps(targets), dtype=np.uint8).astype(np.float32)
+    sample = {}
+    sample['image'] = torch.stack(imgs, 0)
+    sample['target'] = targets
+    return sample
+    #return (torch.stack(imgs, 0), targets)
 
-    return (torch.stack(imgs, 0), targets)
+def collate_minibatch(list_of_blobs):
+    """Custom collate fn for dealing with batches of images that have a different
+    number of associated object annotations (bounding boxes).
+
+    Arguments:
+        batch: (tuple) A tuple of tensor images and lists of annotations
+
+    Return:
+        A tuple containing:
+            1) (tensor) batch of images stacked on their 0 dim
+            2) (list of tensors) annotations for a given image are stacked on 0 dim
+    """
+    Batch = {key: [] for key in list_of_blobs[0]}
+
+    list_of_target = [blobs.pop('target') for blobs in list_of_blobs]
+    # list_of_image = [blobs.pop('image') for blobs in list_of_blobs]
+    batch_size = 1
+    for i in range(0, len(list_of_blobs), 2):
+        # minibatch = {}
+        mini_list = list_of_blobs[i:(i + 2)]
+        # Pad image data
+        minibatch = default_collate(mini_list)
+        minibatch['target'] = list_of_target[i:(i + 2)]
+        for key in minibatch:
+            Batch[key].append(minibatch[key])
+
+    return Batch
+

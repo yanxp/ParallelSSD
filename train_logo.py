@@ -43,7 +43,7 @@ parser.add_argument(
     '--resume_net', default=None, help='resume net for retraining')
 parser.add_argument('--resume_epoch', default=0,
                     type=int, help='resume iter for retraining')
-parser.add_argument('-max','--max_epoch', default=160,
+parser.add_argument('-max','--max_epoch', default=130,
                     type=int, help='max epoch for retraining')
 parser.add_argument('--weight_decay', default=5e-4,
                     type=float, help='Weight decay for SGD')
@@ -179,7 +179,7 @@ def train():
     epoch_size = len(dataset) // args.batch_size
     max_iter = args.max_epoch * epoch_size
 
-    stepvalues_Logo = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
+    stepvalues_Logo = (60 * epoch_size, 90 * epoch_size, 110 * epoch_size)
     stepvalues_COCO = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
     stepvalues = (stepvalues_Logo,stepvalues_COCO)[args.dataset=='COCO']
     print('Training',args.version, 'on', dataset.name)

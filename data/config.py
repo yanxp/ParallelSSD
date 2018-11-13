@@ -8,7 +8,7 @@ ddir = os.path.join(home,"data/VOCdevkit/")
 # note: if you used our download scripts, this should be right
 VOCroot = ddir # path to VOCdevkit root dir
 COCOroot = os.path.join(home,"data/COCO/")
-Logoroot = os.path.join(home,"data/alilogo/")
+Logoroot = os.path.join(home,"data/logo/")
 COCO_512= {
     'feature_maps' : [64, 32, 16, 8, 4, 2, 1],
 

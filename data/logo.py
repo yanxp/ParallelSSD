@@ -1,5 +1,4 @@
 import os
-import pickle
 import os.path
 import sys
 import torch
@@ -8,6 +7,7 @@ import torchvision.transforms as transforms
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
+import pickle
 #from voc_eval import voc_eval
 from .voc_eval import voc_eval
 if sys.version_info[0] == 2:
@@ -16,7 +16,7 @@ else:
     import xml.etree.ElementTree as ET
 import csv
 
-fs = open('data/19logo_name.txt','r') 
+fs = open('data/logo_name.txt','r') 
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
 fs.close()
 # for making bounding boxes pretty
@@ -113,15 +113,21 @@ class LogoDetection(data.Dataset):
                 self.ids.append((rootpath, line.strip()))
 
     def __getitem__(self, index):
+        sample = {}
         img_id = self.ids[index]
         #print(self._annopath % img_id) 
         imgname = self._imgpath % img_id
         target = ET.parse(self._annopath % img_id).getroot()
-        try:
-            img = Image.open(imgname)
-            img = cv2.cvtColor(np.asarray(img),cv2.COLOR_RGB2BGR)
-        except:
-            print('imgname:{}'.format(imgname))
+        
+        img = cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
+
+        #
+        # try:
+        #     img = Image.open(imgname)
+        #     img = cv2.cvtColor(np.asarray(img),cv2.COLOR_RGB2BGR)
+        # except:
+        #     print('imgname:{}'.format(imgname))
+        
         if self.target_transform is not None:
             target = self.target_transform(target)
 
@@ -132,8 +138,11 @@ class LogoDetection(data.Dataset):
 
                     # target = self.target_transform(target, width, height)
         #print(target.shape)
-
-        return img, target
+        sample['image'] = img
+        sample['target'] = np.fromstring(pickle.dumps(target), dtype=np.uint8).astype(np.float32)
+   
+        return sample
+        # return img, target
 
     def __len__(self):
         return len(self.ids)
@@ -273,7 +282,9 @@ class LogoDetection(data.Dataset):
         use_07_metric = True 
         if output_dir is not None and not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-        csvfile = open('result.csv','w')
+        import datetime,time
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        csvfile = open('csv/'+str(now)+'.csv','w')
         writer = csv.writer(csvfile)
         for i, cls in enumerate(LOGO_CLASSES):
 
