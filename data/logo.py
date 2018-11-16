@@ -15,6 +15,7 @@ if sys.version_info[0] == 2:
 else:
     import xml.etree.ElementTree as ET
 import csv
+from tqdm import tqdm
 
 fs = open('data/logo_name.txt','r') 
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
@@ -55,7 +56,7 @@ class AnnotationTransform(object):
             difficult = int(obj.find('difficult').text) == 1
             if not self.keep_difficult and difficult:
                 continue
-            name = obj.find('name').text.lower().strip()
+            name = obj.find('name').text.strip()
             
             bbox = obj.find('bndbox')
 
@@ -64,12 +65,16 @@ class AnnotationTransform(object):
             for i, pt in enumerate(pts):
                 cur_pt = int(float(bbox.find(pt).text)) - 1
                 bndbox.append(cur_pt)
+            
             if int(bndbox[2])-int(bndbox[0])<30 and int(bndbox[3])-int(bndbox[1])<30:
                 continue
+            """
             if name.endswith('text'):
                 name = name.split('_')[0]
+            """
             if name not in LOGO_CLASSES:
                 continue
+         
             label_idx = self.class_to_ind[name]
             bndbox.append(label_idx)
             res = np.vstack((res,bndbox))  # [xmin, ymin, xmax, ymax, label_ind]
@@ -115,12 +120,9 @@ class LogoDetection(data.Dataset):
     def __getitem__(self, index):
         sample = {}
         img_id = self.ids[index]
-        #print(self._annopath % img_id) 
         imgname = self._imgpath % img_id
         target = ET.parse(self._annopath % img_id).getroot()
-        
         img = cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
-
         #
         # try:
         #     img = Image.open(imgname)
@@ -134,15 +136,19 @@ class LogoDetection(data.Dataset):
 
         if self.preproc is not None:
             img, target = self.preproc(img, target)
-            #print(img.size())
+       
+        if np.all(target == 0):
+            print(img_id[1])
+            import pdb;pdb.set_trace()
 
-                    # target = self.target_transform(target, width, height)
-        #print(target.shape)
-        sample['image'] = img
-        sample['target'] = np.fromstring(pickle.dumps(target), dtype=np.uint8).astype(np.float32)
+        if self.image_set == ['test']:
+            return img, target
+        else:
+            sample['image'] = img
+            sample['target'] = np.fromstring(pickle.dumps(target), dtype=np.uint8).astype(np.float32)
    
-        return sample
-        # return img, target
+            return sample
+        #return  target,img_id[1]
 
     def __len__(self):
         return len(self.ids)
@@ -330,8 +336,13 @@ class LogoDetection(data.Dataset):
 
 ## test
 if __name__ == '__main__':
-    ds = LogoDetection('data/19', ['train'],None, AnnotationTransform())
-    for i in range(len(ds)):
-        image, target = ds[i]
+    ds = LogoDetection('data/aliyun', ['train'],None, AnnotationTransform())
+    fs = open('train.txt','w')
+    for i in tqdm(range(len(ds))):
+        target,img_id = ds[i]
+        if np.all(target == 0):
+            print(target,img_id)
+        fs.write(img_id+'\n')
+    fs.close()
 
     #ds.show(100)

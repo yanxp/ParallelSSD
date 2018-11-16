@@ -82,9 +82,9 @@ def test_net(num_classes, save_folder, net, detector, cuda,transform, max_per_im
     # num_images = len(testset)
     # num_classes = (150, 81)[args.dataset == 'COCO']
 
-    jpeg = 'data/logo/JPEGImages'
-    anno = 'data/logo/Annotations'
-    path = 'data/logo/ImageSets/Main/test.txt'
+    jpeg = 'data/aliyun/JPEGImages'
+    anno = 'data/aliyun/Annotations'
+    path = 'data/aliyun/ImageSets/Main/test.txt'
     res = 'result'
     for prefix_name in tqdm(open(path,'r').readlines()):
         
@@ -149,15 +149,12 @@ def test_net(num_classes, save_folder, net, detector, cuda,transform, max_per_im
                 cur_pt = float(bbox.find(pt).text) - 1
                 bndbox.append(cur_pt)
             name = obj.find('name').text.lower().strip()
-            if name.endswith('text'):
-                name = name.split('_')[0]
             if name not in LOGO_CLASSES:
                 continue
             if not os.path.exists(os.path.join(res,name)):
                 os.mkdir(os.path.join(res,name))
             cv2.rectangle(image, (int(bndbox[0]), int(bndbox[1])), (int(bndbox[2]), int(bndbox[3])), COLORS[1], 2)
             cv2.putText(image, '{label}'.format(label=name), (int(bndbox[0]), int(bndbox[1])), FONT, 1, COLORS[1], 2)
-        # print(os.path.join(res,name,img_name))
         cv2.imwrite(os.path.join(res,name,img_name), image)
 
 if __name__ == '__main__':

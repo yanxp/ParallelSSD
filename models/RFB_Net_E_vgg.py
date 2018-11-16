@@ -220,7 +220,7 @@ class RFBNet(nn.Module):
         if self.phase == 'test':
             self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, image,target):
+    def forward(self, image,target=None):
         """Applies network layers and ops on input image(s) x.
 
         Args:
@@ -241,15 +241,15 @@ class RFBNet(nn.Module):
         """
         x = image
         device_id = x.get_device()
-        target = [pickle.loads(t.astype(np.uint8).tobytes()) for t in target]
-        target = [Variable(torch.from_numpy(ann.astype(np.float32))).cuda(device_id) for ann in target]
+        if target != None:
+            target = [pickle.loads(t.astype(np.uint8).tobytes()) for t in target]
+            target = [Variable(torch.from_numpy(ann.astype(np.float32))).cuda(device_id) for ann in target]
         priors = self.priors.cuda(device_id)
         #import pdb;pdb.set_trace()
         sources = list()
         loc = list()
         conf = list()
 
-        return_dict = {}
 
         # print('device_id:',device_id)
         # apply vgg up to conv4_3 relu
@@ -293,10 +293,11 @@ class RFBNet(nn.Module):
                 conf.view(conf.size(0), -1, self.num_classes),
             )
             loss_l,loss_c  = self.criterion(output, priors, target)
-            return_dict['loss_l'] = loss_l.unsqueeze(0)
-            return_dict['loss_c'] = loss_c.unsqueeze(0)
+            output = {}
+            output['loss_l'] = loss_l.unsqueeze(0)
+            output['loss_c'] = loss_c.unsqueeze(0)
         
-        return return_dict
+        return output
 
     def load_weights(self, base_file):
         other, ext = os.path.splitext(base_file)

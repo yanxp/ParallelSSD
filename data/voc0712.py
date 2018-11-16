@@ -375,13 +375,13 @@ def collate_minibatch(list_of_blobs):
 
     list_of_target = [blobs.pop('target') for blobs in list_of_blobs]
     # list_of_image = [blobs.pop('image') for blobs in list_of_blobs]
-    batch_size = 1
-    for i in range(0, len(list_of_blobs), 2):
+    batch_size = 4
+    for i in range(0, len(list_of_blobs), batch_size):
         # minibatch = {}
-        mini_list = list_of_blobs[i:(i + 2)]
+        mini_list = list_of_blobs[i:(i + batch_size)]
         # Pad image data
         minibatch = default_collate(mini_list)
-        minibatch['target'] = list_of_target[i:(i + 2)]
+        minibatch['target'] = list_of_target[i:(i + batch_size)]
         for key in minibatch:
             Batch[key].append(minibatch[key])
 

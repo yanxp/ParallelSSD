@@ -19,7 +19,7 @@ import time
 
 import nn as mynn
 
-
+import pickle
 parser = argparse.ArgumentParser(
     description='Receptive Field Block Net Training')
 parser.add_argument('-v', '--version', default='RFB_vgg',
@@ -87,6 +87,9 @@ fs = open('data/logo_name.txt','r')
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
 fs.close()
 num_classes = len(LOGO_CLASSES)
+
+
+num_image_per_gpu = args.batch_size//args.ngpu
 
 batch_size = args.batch_size
 weight_decay = 0.0005
@@ -266,14 +269,6 @@ def train():
         # load train data
         samples = next(batch_iterator)
         # import pdb;pdb.set_trace()
-        """
-        s = 0
-        for anno in targets:
-            s += sum(anno)
-        if abs(sum(s)-0)<1e-6:
-            continue
-        """
-        #print(np.sum([torch.sum(anno[:,-1] == 2) for anno in targets]))
         #from IPython import embed; embed()
         if args.cuda:
             # samples['image'] = Variable(samples['image'])
