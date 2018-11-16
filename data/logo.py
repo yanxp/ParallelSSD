@@ -16,8 +16,10 @@ else:
     import xml.etree.ElementTree as ET
 import csv
 from tqdm import tqdm
+from .config import Logo_512
+from torch.utils.data.dataloader import default_collate
 
-fs = open('data/logo_name.txt','r') 
+fs = open('data/logo_name.txt','r')
 LOGO_CLASSES = [ eval(name) for name in fs.readline().strip().split(',')]
 fs.close()
 # for making bounding boxes pretty
@@ -333,6 +335,34 @@ class LogoDetection(data.Dataset):
 
 
 
+def collate_minibatch(list_of_blobs):
+    """Custom collate fn for dealing with batches of images that have a different
+    number of associated object annotations (bounding boxes).
+
+    Arguments:
+        batch: (tuple) A tuple of tensor images and lists of annotations
+
+    Return:
+        A tuple containing:
+            1) (tensor) batch of images stacked on their 0 dim
+            2) (list of tensors) annotations for a given image are stacked on 0 dim
+    """
+    Batch = {key: [] for key in list_of_blobs[0]}
+
+    list_of_target = [blobs.pop('target') for blobs in list_of_blobs]
+    # list_of_image = [blobs.pop('image') for blobs in list_of_blobs]
+    batch_size = Logo_512['numpergpu']
+
+    for i in range(0, len(list_of_blobs), batch_size):
+        # minibatch = {}
+        mini_list = list_of_blobs[i:(i + batch_size)]
+        # Pad image data
+        minibatch = default_collate(mini_list)
+        minibatch['target'] = list_of_target[i:(i + batch_size)]
+        for key in minibatch:
+            Batch[key].append(minibatch[key])
+
+    return Batch
 
 ## test
 if __name__ == '__main__':

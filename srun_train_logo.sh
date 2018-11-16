@@ -1,1 +1,1 @@
-srun --partition=SenseMediaF --mpi=pmi2 --gres=gpu:8 --job-name=logo --kill-on-bad-exit=1 python train_logo_coco.py -d Logo -v RFB_E_vgg -s 512 -b 32 --ngpu 8 --save_folder aliyun --resume_net RFB512_E_34_4.pth 
+srun --partition=SenseMediaA --mpi=pmi2 --gres=gpu:8 --job-name=logo --kill-on-bad-exit=1 python train_logo_coco.py -d Logo -v RFB_E_vgg -s 512 -b 16 --ngpu 8 --save_folder 2000 --resume_net RFB512_E_34_4.pth 

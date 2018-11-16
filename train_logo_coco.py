@@ -89,7 +89,7 @@ fs.close()
 num_classes = len(LOGO_CLASSES)
 
 
-num_image_per_gpu = args.batch_size//args.ngpu
+Logo_512['numpergpu'] = args.batch_size//args.ngpu
 
 batch_size = args.batch_size
 weight_decay = 0.0005
